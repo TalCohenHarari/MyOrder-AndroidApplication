@@ -9,6 +9,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -62,7 +63,8 @@ public class CreateNoteActivity extends AppCompatActivity {
     private final static int REQUEST_IMAGE_CAPTURE = 3;
     private final static int REQUEST_CODE_SELECTED_IMAGE=2;
     private String selectedImagePath;
-
+    private Note alreadyAvailableNote;
+    private AlertDialog dialogDeleteNote;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,13 +86,48 @@ public class CreateNoteActivity extends AppCompatActivity {
         //Listeners
         imageBack.setOnClickListener(v->onBackPressed());
         imageSave.setOnClickListener(v->saveNote());
-
+        findViewById(R.id.imageRemoveURL).setOnClickListener(v-> {
+            textWebUrl.setText(null);
+            layoutWebURL.setVisibility(View.GONE);
+        });
+        findViewById(R.id.imageRemoveImage).setOnClickListener(v-> {
+            imageNote.setImageBitmap(null);
+            imageNote.setVisibility(View.GONE);
+            findViewById(R.id.imageRemoveImage).setVisibility(View.GONE);
+            selectedImagePath="";
+        });
         //Init
         textDateTime.setText(new SimpleDateFormat("EEEE, dd MMMM yyyy HH:mm a", Locale.getDefault()).format(new Date()));
         selectedNoteColor="#333333"; //Default note color
         selectedImagePath="";
+        if(getIntent().getBooleanExtra("isViewOrUpdate",false)){
+            alreadyAvailableNote = (Note)getIntent().getSerializableExtra("note");
+            setViewOrUpdate();
+        }
         initMiscellaneous();
         setSubtitleIndicatorColor();
+
+
+    }
+
+    //------------------------------------------View Or Update-------------------------------------------------
+    private void setViewOrUpdate(){
+        inputNoteTitle.setText(alreadyAvailableNote.getTitle());
+        inputNoteSubtitle.setText(alreadyAvailableNote.getSubtitle());
+        inputNoteText.setText(alreadyAvailableNote.getNoteText());
+        textDateTime.setText(alreadyAvailableNote.getDateTime());
+
+        if(alreadyAvailableNote.getImagePath()!=null && !alreadyAvailableNote.getImagePath().trim().isEmpty()){
+            imageNote.setImageBitmap(BitmapFactory.decodeFile(alreadyAvailableNote.getImagePath()));
+            imageNote.setVisibility(View.VISIBLE);
+            findViewById(R.id.imageRemoveImage).setVisibility(View.VISIBLE);
+            selectedImagePath = alreadyAvailableNote.getImagePath();
+        }
+
+        if(alreadyAvailableNote.getWebLink()!=null && !alreadyAvailableNote.getWebLink().trim().isEmpty()){
+            textWebUrl.setText(alreadyAvailableNote.getWebLink());
+            layoutWebURL.setVisibility(View.VISIBLE);
+        }
     }
 
     //------------------------------------------Save note-------------------------------------------------
@@ -114,6 +151,10 @@ public class CreateNoteActivity extends AppCompatActivity {
 
         if(layoutWebURL.getVisibility() == View.VISIBLE){
             note.setWebLink(textWebUrl.getText().toString());
+        }
+
+        if(alreadyAvailableNote != null){
+            note.setId(alreadyAvailableNote.getId());
         }
         //Room doesn't allow database operation on the main thread. That's why we are using async task to save note.
         class SaveNoteTask extends AsyncTask<Void,Void,Void>{
@@ -181,7 +222,7 @@ public class CreateNoteActivity extends AppCompatActivity {
             setSubtitleIndicatorColor();
         });
         layoutMiscellaneous.findViewById(R.id.viewColor4).setOnClickListener(v-> {
-            selectedNoteColor = "#3A52FC";
+            selectedNoteColor = "#3A52Fc";
             imageColor1.setImageResource(0);
             imageColor2.setImageResource(0);
             imageColor3.setImageResource(0);
@@ -198,6 +239,23 @@ public class CreateNoteActivity extends AppCompatActivity {
             imageColor5.setImageResource(R.drawable.ic_done);
             setSubtitleIndicatorColor();
         });
+
+        if(alreadyAvailableNote !=null && alreadyAvailableNote.getColor() != null && !alreadyAvailableNote.getColor().trim().isEmpty()){
+            switch (alreadyAvailableNote.getColor()){
+                case "#FDBE3B":
+                    layoutMiscellaneous.findViewById(R.id.viewColor2).performClick();
+                    break;
+                case "#FF4842":
+                    layoutMiscellaneous.findViewById(R.id.viewColor3).performClick();
+                    break;
+                case "#3A52Fc":
+                    layoutMiscellaneous.findViewById(R.id.viewColor4).performClick();
+                    break;
+                case "#000000":
+                    layoutMiscellaneous.findViewById(R.id.viewColor5).performClick();
+                    break;
+            }
+        }
 
         layoutMiscellaneous.findViewById(R.id.layoutAddImage).setOnClickListener(v->{
             bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
@@ -229,8 +287,59 @@ public class CreateNoteActivity extends AppCompatActivity {
             bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             showAddURLDialog();
         });
-    }
 
+        if(alreadyAvailableNote!=null){
+            layoutMiscellaneous.findViewById(R.id.layoutDeleteNote).setVisibility(View.VISIBLE);
+            layoutMiscellaneous.findViewById(R.id.layoutDeleteNote).setOnClickListener(v->{
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                showDeleteNoteDialog();
+            });
+        }
+    }
+    //------------------------------------------Show Delete Note Dialog-------------------------------------------------
+    private void showDeleteNoteDialog(){
+        if(dialogDeleteNote==null){
+            AlertDialog.Builder builder = new AlertDialog.Builder(CreateNoteActivity.this);
+            View view = LayoutInflater.from(this).inflate(
+                    R.layout.layout_delete_note,
+                    (ViewGroup)findViewById(R.id.layoutDeleteNoteContainer)
+            );
+            builder.setView(view);
+            dialogDeleteNote = builder.create();
+            if(dialogDeleteNote.getWindow()!=null){
+                dialogDeleteNote.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+            }
+            view.findViewById(R.id.textDeleteNote).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    @SuppressLint("StaticFieldLeak")
+                    class DeleteNoteTask extends  AsyncTask<Void,Void,Void>{
+
+                        @Override
+                        protected Void doInBackground(Void... voids) {
+                            NotesDatabase.getNotesDatabase(getApplicationContext()).noteDao().
+                                    deleteNote(alreadyAvailableNote);
+                            return null;
+                        }
+
+                        @Override
+                        protected void onPostExecute(Void aVoid) {
+                            super.onPostExecute(aVoid);
+                            Intent intent = new Intent();
+                            intent.putExtra("isNoteDeleted",true);
+                            setResult(RESULT_OK,intent);
+                            finish();
+                        }
+                    }
+                    new DeleteNoteTask().execute();
+                }
+            });
+
+            view.findViewById(R.id.textCancel).setOnClickListener(v->dialogDeleteNote.dismiss());
+        }
+
+        dialogDeleteNote.show();
+    }
     //------------------------------------------Set side line color near the subtitle-------------------------------------------------
     private void setSubtitleIndicatorColor(){
         GradientDrawable gradientDrawable = (GradientDrawable)viewSubtitleIndicator.getBackground();
@@ -288,6 +397,8 @@ public class CreateNoteActivity extends AppCompatActivity {
                       Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                       imageNote.setImageBitmap(bitmap);
                       imageNote.setVisibility(View.VISIBLE);
+                      findViewById(R.id.imageRemoveImage).setVisibility(View.VISIBLE);
+
                       selectedImagePath=getPathFromUri(selectedImageUri);
                   }
                   catch (Exception exception){
