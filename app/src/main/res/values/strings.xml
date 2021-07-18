@@ -9,4 +9,8 @@
     <string name="pick_color">Pick Color</string>
     <string name="add_image">Add Image</string>
     <string name="take_picture">Take Picture</string>
+    <string name="add_url">Add URL</string>
+    <string name="enter_url">Enter URL</string>
+    <string name="add_url_dialog">Add</string>
+    <string name="cancel_url_dialog">Cancel</string>
 </resources>

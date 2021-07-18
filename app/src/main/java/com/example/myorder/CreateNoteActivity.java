@@ -3,6 +3,7 @@ package com.example.myorder;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -16,13 +17,18 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.PathEffect;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Patterns;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -47,7 +53,9 @@ public class CreateNoteActivity extends AppCompatActivity {
 
     ImageView imageBack, imageSave, imageNote;
     private EditText inputNoteTitle, inputNoteSubtitle, inputNoteText;
-    private TextView textDateTime;
+    private TextView textDateTime, textWebUrl;
+    private LinearLayout layoutWebURL;
+    private AlertDialog dialogAddURL;
     private String selectedNoteColor;
     private View viewSubtitleIndicator;
     private final static int REQUEST_CODE_STORAGE_PERMISSION=1;
@@ -70,7 +78,8 @@ public class CreateNoteActivity extends AppCompatActivity {
         textDateTime = findViewById(R.id.textDateTime);
         viewSubtitleIndicator = findViewById(R.id.viewSubtitleIndicator);
         imageNote = findViewById(R.id.imageNote);
-
+        textWebUrl = findViewById(R.id.textWebUrl);
+        layoutWebURL = findViewById(R.id.layoutWebUrl);
 
         //Listeners
         imageBack.setOnClickListener(v->onBackPressed());
@@ -103,6 +112,9 @@ public class CreateNoteActivity extends AppCompatActivity {
         note.setColor(selectedNoteColor);
         note.setImagePath(selectedImagePath);
 
+        if(layoutWebURL.getVisibility() == View.VISIBLE){
+            note.setWebLink(textWebUrl.getText().toString());
+        }
         //Room doesn't allow database operation on the main thread. That's why we are using async task to save note.
         class SaveNoteTask extends AsyncTask<Void,Void,Void>{
 
@@ -212,6 +224,11 @@ public class CreateNoteActivity extends AppCompatActivity {
                 takePicture();
 
         });
+
+        layoutMiscellaneous.findViewById(R.id.layoutAddUrl).setOnClickListener(v->{
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            showAddURLDialog();
+        });
     }
 
     //------------------------------------------Set side line color near the subtitle-------------------------------------------------
@@ -291,7 +308,6 @@ public class CreateNoteActivity extends AppCompatActivity {
     }
 
     //------------------------------------------Get Image Path---------------------------------------------------------
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     private String getPathFromUri(Uri contentUri){
         String filePath;
@@ -306,5 +322,40 @@ public class CreateNoteActivity extends AppCompatActivity {
             cursor.close();
         }
         return filePath;
+    }
+
+    //------------------------------------------URL Dialog---------------------------------------------------------
+    private void showAddURLDialog(){
+        if(dialogAddURL==null){
+            AlertDialog.Builder builder = new AlertDialog.Builder(CreateNoteActivity.this);
+            View view = LayoutInflater.from(this).inflate(
+                    R.layout.layout_add_url,
+                    (ViewGroup)findViewById(R.id.layoutAddUrlContainer)
+            );
+            builder.setView(view);
+            dialogAddURL = builder.create();
+            if(dialogAddURL.getWindow()!=null){
+                dialogAddURL.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+            }
+
+            final EditText inputURL= view.findViewById(R.id.inputUrl);
+            inputURL.requestFocus();
+
+            view.findViewById(R.id.textAdd).setOnClickListener(v->{
+                if(inputURL.getText().toString().trim().isEmpty()){
+                    Toast.makeText(CreateNoteActivity.this,"Enter URL",Toast.LENGTH_SHORT).show();
+                }
+                else if(!Patterns.WEB_URL.matcher(inputURL.getText().toString()).matches()){
+                    Toast.makeText(CreateNoteActivity.this,"Ener valid URL",Toast.LENGTH_SHORT).show();
+                }else{
+                    textWebUrl.setText(inputURL.getText().toString());
+                    layoutWebURL.setVisibility(View.VISIBLE);
+                    dialogAddURL.dismiss();
+                }
+            });
+
+            view.findViewById(R.id.textCancel).setOnClickListener(v->dialogAddURL.dismiss());
+        }
+        dialogAddURL.show();
     }
 }
