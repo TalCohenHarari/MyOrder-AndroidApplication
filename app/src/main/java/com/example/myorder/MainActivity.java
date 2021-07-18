@@ -52,6 +52,9 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
         notesAdapter = new NotesAdapter(noteList,this);
         notesRecyclerView.setAdapter(notesAdapter);
 
+        //init
+        getNotes(REQUEST_CODE_SHOW_NOTES,false);
+
         //Listeners
         imageAddNoteMain.setOnClickListener(v->startActivityForResult(new Intent(getApplicationContext(),CreateNoteActivity.class),REQUEST_CODE_ADD_NOTE));
         inputSearch.addTextChangedListener(new TextWatcher() {
@@ -72,10 +75,6 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
                 }
             }
         });
-
-        //init
-        getNotes(REQUEST_CODE_SHOW_NOTES,false);
-
     }
 
     @Override
