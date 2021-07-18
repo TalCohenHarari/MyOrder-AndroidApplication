@@ -8,6 +8,9 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.EditText;
 import android.widget.ImageView;
 
 import com.example.myorder.adapters.NotesAdapter;
@@ -26,6 +29,7 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
     public static final int REQUEST_CODE_SHOW_NOTES = 3;
 
     ImageView imageAddNoteMain;
+    EditText inputSearch;
     private RecyclerView notesRecyclerView;
     private List<Note> noteList;
     private NotesAdapter notesAdapter;
@@ -38,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
 
         //Initialize
         imageAddNoteMain = findViewById(R.id.imageAddNoteMain);
+        inputSearch = findViewById(R.id.inputSearch);
 
         //RecyclerView
         notesRecyclerView = findViewById(R.id.notesRycyclerview);
@@ -49,10 +54,28 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
 
         //Listeners
         imageAddNoteMain.setOnClickListener(v->startActivityForResult(new Intent(getApplicationContext(),CreateNoteActivity.class),REQUEST_CODE_ADD_NOTE));
+        inputSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                notesAdapter.cancelTimer();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if(noteList.size()!=0){
+                    notesAdapter.searchNotes(s.toString());
+                }
+            }
+        });
 
         //init
         getNotes(REQUEST_CODE_SHOW_NOTES,false);
+
     }
 
     @Override
