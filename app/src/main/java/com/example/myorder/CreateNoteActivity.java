@@ -71,6 +71,7 @@ public class CreateNoteActivity extends AppCompatActivity {
         viewSubtitleIndicator = findViewById(R.id.viewSubtitleIndicator);
         imageNote = findViewById(R.id.imageNote);
 
+
         //Listeners
         imageBack.setOnClickListener(v->onBackPressed());
         imageSave.setOnClickListener(v->saveNote());
